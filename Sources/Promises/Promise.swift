@@ -19,7 +19,7 @@ public final class Promise<Value> {
   public typealias ObjCPromise<Value: AnyObject> = FBLPromise<Value>
 
   /// Creates a new promise with an existing ObjC promise.
-  public init<Value>(_ objCPromise: ObjCPromise<Value>) {
+  init<Value>(objCPromise: ObjCPromise<Value>) {
     guard let objCPromise = objCPromise as? ObjCPromise<AnyObject> else {
       preconditionFailure("Cannot cast \(Value.self) to \(AnyObject.self)")
     }
@@ -28,12 +28,12 @@ public final class Promise<Value> {
 
   /// Creates a new pending promise.
   public static func pending() -> Promise<Value> {
-    return Promise<Value>.init(ObjCPromise<AnyObject>.__pending())
+    return Promise<Value>.init(objCPromise: ObjCPromise<AnyObject>.__pending())
   }
 
   /// Creates a new promise rejected with the given `error`.
   public convenience init(_ error: Error) {
-    self.init(ObjCPromise<AnyObject>.__resolved(with: error as NSError))
+    self.init(objCPromise: ObjCPromise<AnyObject>.__resolved(with: error as NSError))
   }
 
   /// Creates a new promise resolved with the result of `work` block.
@@ -44,9 +44,9 @@ public final class Promise<Value> {
       case let error as NSError:
         self.init(error)
       case let objCPromise as ObjCPromise<AnyObject>:
-        self.init(objCPromise)
+        self.init(objCPromise: objCPromise)
       default:
-        self.init(ObjCPromise<AnyObject>.__resolved(with: Promise<Value>.asAnyObject(resolution)))
+        self.init(objCPromise: ObjCPromise<AnyObject>.__resolved(with: Promise<Value>.asAnyObject(resolution)))
       }
     } catch let error {
       self.init(error as NSError)
@@ -61,14 +61,6 @@ public final class Promise<Value> {
   /// Rejects `self` with the given `error`.
   public func reject(_ error: Error) {
     objCPromise.__fulfill(error as NSError)
-  }
-
-  /// Converts `self` into ObjC promise.
-  public func asObjCPromise<Value>() -> ObjCPromise<Value> {
-    guard let objCPromise = objCPromise as? ObjCPromise<Value> else {
-      preconditionFailure("Cannot cast \(AnyObject.self) to \(Value.self)")
-    }
-    return objCPromise
   }
 
   // MARK: Internal
@@ -117,9 +109,23 @@ public final class Promise<Value> {
   }
 }
 
+extension Promise where Value: AnyObject {
+  public convenience init(_ objCPromise: ObjCPromise<Value>) {
+    self.init(objCPromise)
+  }
+
+  /// Converts `self` into ObjC promise.
+  public func asObjCPromise() -> ObjCPromise<Value> {
+    guard let promise = objCPromise as? ObjCPromise<Value> else {
+      preconditionFailure("Cannot cast \(type(of: objCPromise)) to \(ObjCPromise<Value>.self)")
+    }
+    return promise
+  }
+}
+
 extension Promise where Value: _ObjectiveCBridgeable {
   public convenience init(bridging bridgeableObjCPromise: ObjCPromise<Value._ObjectiveCType>) {
-    self.init(bridgeableObjCPromise)
+    self.init(objCPromise: bridgeableObjCPromise)
   }
 
   public func asBridgedObjCPromise() -> ObjCPromise<Value._ObjectiveCType> {
