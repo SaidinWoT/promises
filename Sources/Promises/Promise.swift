@@ -117,6 +117,20 @@ public final class Promise<Value> {
   }
 }
 
+extension Promise where Value: _ObjectiveCBridgeable {
+  public convenience init(bridging bridgeableObjCPromise: ObjCPromise<Value._ObjectiveCType>) {
+    self.init(bridgeableObjCPromise)
+  }
+
+  public func asBridgedObjCPromise() -> ObjCPromise<Value._ObjectiveCType> {
+    guard let objCPromise = objCPromise as? ObjCPromise<Value._ObjectiveCType> else {
+      preconditionFailure(
+        "Cannot cast \(type(of: objCPromise) to \(ObjCPromise<Value._ObjectiveCType>.self)")
+    }
+    return objCPromise
+  }
+}
+
 extension Promise: CustomStringConvertible {
   public var description: String {
     var description = "nil"
